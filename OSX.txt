@@ -1,0 +1,16 @@
+Requirements:
+  MacFuse 0.2.2 or higher (http://code.google.com/p/macfuse/)
+
+Description:
+
+This is the version of Ruby fusefs library ported to work with MacFuse.
+
+Important API Changes:
+
+1. Since MacFuse uses an aggressive filesystem caching mechanisms, it is important for all objects that play a role of the root of a virtual filesystem (registered with FuseFS.set_root) or that are registered as virtual files via MetaDir.write_to is to provide an implementation of `size` method. Otherwise, the file size will be set to zero and MacFuse will never call `read` method (essentially making it empty).
+
+2. If the file content is being changed without writing to it directly via MacFuse filesystem, you must pass `nolocalcache` option when mounting your filesystem, like so:
+
+    FuseFS.mount_under(dirname, 'nolocalcaches')
+    
+   Without that option specified MacFuse would never pick up file changes. Check sample/demo.rb as an example.
