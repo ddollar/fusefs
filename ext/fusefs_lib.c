@@ -1256,7 +1256,6 @@ rf_read(const char *path, char *buf, size_t size, off_t offset,
     memcpy(buf, RSTRING(ret)->ptr, RSTRING(ret)->len);
     return RSTRING(ret)->len;
   }
-  printf("%s\n", ptr->value);
 
   /* Is there anything left to read? */
   if (offset < ptr->size) {
