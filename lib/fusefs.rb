@@ -10,14 +10,18 @@ module FuseFS
   @running = true
   def FuseFS.run
     fd = FuseFS.fuse_fd
-    io = IO.for_fd(fd)
+    begin
+      io = IO.for_fd(fd)
+    rescue Errno::EBADF
+      raise "fuse is not mounted"
+    end
     while @running
       IO.select([io])
       FuseFS.process
     end
   end
   def FuseFS.unmount
-    system("fusermount -u #{@mountpoint}")
+    system("umount #{@mountpoint}")
   end
   def FuseFS.exit
     @running = false
