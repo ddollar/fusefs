@@ -83,6 +83,7 @@ VALUE FuseRoot     = Qnil; /* The root object we call */
 RMETHOD(id_dir_contents,"contents");
 RMETHOD(id_read_file,"read_file");
 RMETHOD(id_write_to,"write_to");
+RMETHOD(id_link,"link");
 RMETHOD(id_delete,"delete");
 RMETHOD(id_mkdir,"mkdir");
 RMETHOD(id_rmdir,"rmdir");
@@ -93,6 +94,7 @@ RMETHOD(is_directory,"directory?");
 RMETHOD(is_file,"file?");
 RMETHOD(is_executable,"executable?");
 RMETHOD(can_write,"can_write?");
+RMETHOD(can_link,"can_link?");
 RMETHOD(can_delete,"can_delete?");
 RMETHOD(can_mkdir,"can_mkdir?");
 RMETHOD(can_rmdir,"can_rmdir?");
@@ -971,6 +973,47 @@ rf_rename(const char *path, const char *dest) {
   return 0;
 }
 
+/* rf_link
+ *
+ * Used when: a file is hardlinked.
+ *
+ * Make sure we can read the source and write the destination then go for it!
+ *
+ */
+static int
+rf_link(const char *path, const char *dest) {
+  /* Does it exist to be linked? */
+
+  debug("rf_link(%s,%s)\n", path,dest);
+  debug("  Checking if %s is file ...", path);
+  if (!RTEST(rf_call(path,is_file,Qnil))) {
+    debug(" no.\n");
+    return -ENOENT;
+  }
+  debug(" yes.\n");
+
+  // /* Can we read the old one? */
+  // debug("  Checking if %s ...", path);
+  // if (!RTEST(rf_call(path,can_read,Qnil))) {
+  //   debug(" no.\n");
+  //   return -EACCES;
+  // }
+  // debug(" yes.\n");
+ 
+  /* Can we create the new one? */
+  debug("  Checking if we can write to %s ...", dest);
+  if (!RTEST(rf_call(dest,can_write,Qnil))) {
+    debug(" no.\n");
+    return -EACCES;
+  }
+  debug(" yes.\n");
+
+  /* Copy it over and then remove. */
+  debug("  Linking.\n");
+  rf_call(path,id_link,rb_str_new2(dest));
+  return 0;
+}
+
 /* rf_unlink
  *
  * Used when: a file is removed.
@@ -1283,6 +1326,13 @@ rf_utime(const char *path, struct utimbuf *ubuf)
 static int
 rf_statfs(const char *path, struct statvfs *buf)
 {
+  buf->f_bsize   =       1024;
+  buf->f_blocks  = 1000000000;
+  buf->f_bfree   =  999999999;
+  buf->f_bavail  =  999999999;
+  buf->f_files   =     100000;
+  buf->f_ffree   =      99999;
+  buf->f_namemax =       256;
   return 0;
 }
 
@@ -1301,6 +1351,7 @@ static struct fuse_operations rf_oper = {
     .rmdir     = rf_rmdir,
     .truncate  = rf_truncate,
     .rename    = rf_rename,
+    .link      = rf_link,
     .open      = rf_open,
     .release   = rf_release,
     .utime     = rf_touch,
