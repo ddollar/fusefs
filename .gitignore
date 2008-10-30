@@ -1,2 +1,6 @@
-ext/*
+InstalledFiles
+ext/Makefile
+ext/*.o
+ext/*.log
+ext/*.bundle
 .config
