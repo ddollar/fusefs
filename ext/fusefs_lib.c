@@ -151,7 +151,7 @@ editor_fileP(const char *path) {
 
   if (!handle_editor)
     return 0;
-  
+
   /* Already created one */
   for (ptr = editor_head ; ptr ; ptr = ptr->next) {
     if (strcasecmp(ptr->path,path) == 0) {
@@ -172,7 +172,7 @@ editor_fileP(const char *path) {
     int len;
     if (*ptr != '.') break;
 
-    // ends with .sw? 
+    // ends with .sw?
     ptr = strrchr(ptr,'.');
     len = strlen(ptr);
     // .swp or .swpx
@@ -254,7 +254,7 @@ rf_mcall(const char *path, ID method, char *methname, VALUE arg) {
 
   /* Set up the call and make it. */
   result = rb_protect(rf_protected, methargs, &error);
- 
+
   /* Did it error? */
   if (error) return Qnil;
 
@@ -432,7 +432,7 @@ rf_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     }
     debug(" yes.\n");
   }
- 
+
   /* These two are Always in a directory */
   filler(buf,".", NULL, 0);
   filler(buf,"..", NULL, 0);
@@ -473,7 +473,7 @@ rf_mknod(const char *path, mode_t umode, dev_t rdev) {
 
   debug("rf_mknod(%s)\n", path);
   /* Make sure it's not already open. */
-  
+
   debug("  Checking if it's opened ...");
   if (file_openedP(path)) {
     debug(" yes.\n");
@@ -593,7 +593,7 @@ rf_open(const char *path, struct fuse_file_info *fi) {
     return -EACCES;
   }
   debug(" no.\n");
- 
+
   debug("Checking if an editor file is requested...");
   switch (editor_fileP(path)) {
   case 2:
@@ -930,7 +930,7 @@ rf_rename(const char *path, const char *dest) {
     }
     debug(" yes.\n");
   }
- 
+
   /* Can we create the new one? */
   debug("  Checking if we can write to %s ...", dest);
   if (!RTEST(rf_call(dest,can_write,Qnil))) {
@@ -999,7 +999,7 @@ rf_link(const char *path, const char *dest) {
   //   return -EACCES;
   // }
   // debug(" yes.\n");
- 
+
   /* Can we create the new one? */
   debug("  Checking if we can write to %s ...", dest);
   if (!RTEST(rf_call(dest,can_write,Qnil))) {
@@ -1064,7 +1064,7 @@ rf_unlink(const char *path) {
     return -EACCES;
   }
   debug(" no.\n");
- 
+
   /* Ok, remove it! */
   debug("  Removing it.\n");
   rf_call(path,id_delete,Qnil);
@@ -1104,7 +1104,7 @@ rf_truncate(const char *path, off_t offset) {
   if (!RTEST(rf_call(path,can_delete,Qnil))) {
     return -EACCES;
   }
- 
+
   /* If offset is 0, then we just overwrite it with an empty file. */
   if (offset > 0) {
     VALUE newstr = rb_str_new2("");
@@ -1148,7 +1148,7 @@ rf_mkdir(const char *path, mode_t mode) {
   /* Can we mkdir it? */
   if (!RTEST(rf_call(path,can_mkdir,Qnil)))
     return -EACCES;
- 
+
   /* Ok, mkdir it! */
   rf_call(path,id_mkdir,Qnil);
   return 0;
@@ -1175,7 +1175,7 @@ rf_rmdir(const char *path) {
   /* Can we rmdir it? */
   if (!RTEST(rf_call(path,can_rmdir,Qnil)))
     return -EACCES;
- 
+
   /* Ok, rmdir it! */
   rf_call(path,id_rmdir,Qnil);
   return 0;
@@ -1317,7 +1317,7 @@ rf_fsyncdir(const char * path, int p, struct fuse_file_info *fi)
   return 0;
 }
 
-static int 
+static int
 rf_utime(const char *path, struct utimbuf *ubuf)
 {
   return 0;
@@ -1431,7 +1431,7 @@ rf_mount_to(int argc, VALUE *argv, VALUE self) {
   opts->argc = argc;
   opts->argv = ALLOC_N(char *, opts->argc);
   opts->allocated = 1;
-  
+
   opts->argv[0] = strdup("-odirect_io");
 
   for (i = 1; i < argc; i++) {
@@ -1487,18 +1487,18 @@ rf_process(VALUE self) {
  *   checking, returning a different file for different users, etc.
  */
 VALUE
-rf_uid(VALUE self) {
+rf_uid(VALUE self)
+{
   int fd = fusefs_uid();
-  if (fd < 0)
-    return Qnil;
+  if (fd < 0) return Qnil;
   return INT2NUM(fd);
 }
 
 VALUE
-rf_gid(VALUE self) {
+rf_gid(VALUE self)
+{
   int fd = fusefs_gid();
-  if (fd < 0)
-    return Qnil;
+  if (fd < 0) return Qnil;
   return INT2NUM(fd);
 }
 
@@ -1510,56 +1510,57 @@ rf_gid(VALUE self) {
  *   its methods.
  */
 void
-Init_fusefs_lib() {
+initialize_rfuse()
+{
   opened_head = NULL;
-  init_time = time(NULL);
+  init_time   = time(NULL);
 
   /* module FuseFS */
-  cFuseFS = rb_define_module("FuseFS");
+  cRFuse = rb_define_module("RFuse");
 
   /* Our exception */
-  cFSException = rb_define_class_under(cFuseFS,"FuseFSException",rb_eStandardError);
+  cRFuseException = rb_define_class_under(cRFuse, "RFuseException", rb_eStandardError);
 
   /* def Fuse.run */
-  rb_define_singleton_method(cFuseFS,"fuse_fd",     (rbfunc) rf_fd, 0);
-  rb_define_singleton_method(cFuseFS,"reader_uid",  (rbfunc) rf_uid, 0);
-  rb_define_singleton_method(cFuseFS,"uid",         (rbfunc) rf_uid, 0);
-  rb_define_singleton_method(cFuseFS,"reader_gid",  (rbfunc) rf_gid, 0);
-  rb_define_singleton_method(cFuseFS,"gid",         (rbfunc) rf_gid, 0);
-  rb_define_singleton_method(cFuseFS,"process",     (rbfunc) rf_process, 0);
-  rb_define_singleton_method(cFuseFS,"mount_to",    (rbfunc) rf_mount_to, -1);
-  rb_define_singleton_method(cFuseFS,"mount_under", (rbfunc) rf_mount_to, -1);
-  rb_define_singleton_method(cFuseFS,"mountpoint",  (rbfunc) rf_mount_to, -1);
-  rb_define_singleton_method(cFuseFS,"set_root",    (rbfunc) rf_set_root, 1);
-  rb_define_singleton_method(cFuseFS,"root=",       (rbfunc) rf_set_root, 1);
-  rb_define_singleton_method(cFuseFS,"handle_editor",   (rbfunc) rf_handle_editor, 1);
-  rb_define_singleton_method(cFuseFS,"handle_editor=",  (rbfunc) rf_handle_editor, 1);
+  rb_define_singleton_method(cRFuse, "fuse_fd",        (rbfunc) rf_fd,             0);
+  rb_define_singleton_method(cRFuse, "uid",            (rbfunc) rf_uid,            0);
+  rb_define_singleton_method(cRFuse, "gid",            (rbfunc) rf_gid,            0);
+  rb_define_singleton_method(cRFuse, "process",        (rbfunc) rf_process,        0);
+  rb_define_singleton_method(cRFuse, "mount_to",       (rbfunc) rf_mount_to,      -1);
+  rb_define_singleton_method(cRFuse, "mount_under",    (rbfunc) rf_mount_to,      -1);
+  rb_define_singleton_method(cRFuse, "mountpoint",     (rbfunc) rf_mount_to,      -1);
+  rb_define_singleton_method(cRFuse, "set_root",       (rbfunc) rf_set_root,       1);
+  rb_define_singleton_method(cRFuse, "root=",          (rbfunc) rf_set_root,       1);
+  rb_define_singleton_method(cRFuse, "handle_editor",  (rbfunc) rf_handle_editor,  1);
+  rb_define_singleton_method(cRFuse, "handle_editor=", (rbfunc) rf_handle_editor,  1);
+
+  // rb_define_singleton_method(cRFuse, "reader_uid",     (rbfunc) rf_uid,           0);
+  // rb_define_singleton_method(cRFuse, "reader_gid",     (rbfunc) rf_gid,           0);
 
 #undef RMETHOD
-#define RMETHOD(name,cstr) \
-  name = rb_intern(cstr);
+#define RMETHOD(name,cstr) name = rb_intern(cstr);
 
-  RMETHOD(id_dir_contents,"contents");
-  RMETHOD(id_read_file,"read_file");
-  RMETHOD(id_write_to,"write_to");
-  RMETHOD(id_delete,"delete");
-  RMETHOD(id_mkdir,"mkdir");
-  RMETHOD(id_rmdir,"rmdir");
-  RMETHOD(id_touch,"touch");
-  RMETHOD(id_size,"size");
+  RMETHOD(id_dir_contents, "contents");
+  RMETHOD(id_read_file,    "read_file");
+  RMETHOD(id_write_to,     "write_to");
+  RMETHOD(id_delete,       "delete");
+  RMETHOD(id_mkdir,        "mkdir");
+  RMETHOD(id_rmdir,        "rmdir");
+  RMETHOD(id_touch,        "touch");
+  RMETHOD(id_size,         "size");
 
-  RMETHOD(is_directory,"directory?");
-  RMETHOD(is_file,"file?");
-  RMETHOD(is_executable,"executable?");
-  RMETHOD(can_write,"can_write?");
-  RMETHOD(can_delete,"can_delete?");
-  RMETHOD(can_mkdir,"can_mkdir?");
-  RMETHOD(can_rmdir,"can_rmdir?");
+  RMETHOD(is_directory,    "directory?");
+  RMETHOD(is_file,         "file?");
+  RMETHOD(is_executable,   "executable?");
+  RMETHOD(can_write,       "can_write?");
+  RMETHOD(can_delete,      "can_delete?");
+  RMETHOD(can_mkdir,       "can_mkdir?");
+  RMETHOD(can_rmdir,       "can_rmdir?");
 
-  RMETHOD(id_raw_open,"raw_open");
-  RMETHOD(id_raw_close,"raw_close");
-  RMETHOD(id_raw_read,"raw_read");
-  RMETHOD(id_raw_write,"raw_write");
+  RMETHOD(id_raw_open,     "raw_open");
+  RMETHOD(id_raw_close,    "raw_close");
+  RMETHOD(id_raw_read,     "raw_read");
+  RMETHOD(id_raw_write,    "raw_write");
 
-  RMETHOD(id_dup,"dup");
+  RMETHOD(id_dup,          "dup");
 }

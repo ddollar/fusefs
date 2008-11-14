@@ -1,4 +1,4 @@
-require 'fusefs'
+require File.join(File.dirname(__FILE__), '..', 'lib', 'fusefs')
 include FuseFS
 
 require 'pp'

@@ -5,6 +5,7 @@
 # This includes helper functions, common uses, etc.
 
 require 'fusefs_lib'
+require File.join(File.dirname(__FILE__), 'fusefs_helper')
 
 module FuseFS
   @running = true
